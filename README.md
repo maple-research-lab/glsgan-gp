@@ -1,1 +1,69 @@
-# lsgan-gp
+# Loss-Sensitive GAN With Gradient Penalty
+
+Implemented by: Zihang Zou, Laboratory for MAchine Perception and Learning(MAPLE), University of Central Florida
+
+Please cite the following paper when referring to the following algorithms:
+
+**Guo-Jn Qi. Loss-Sensitive Generative Adversarial Networks on Lipschitz Densities. arXiv:1701.06264 [[pdf](https://arxiv.org/abs/1701.06264)]**
+
+## Reference
+
+### 1.LS-GAN
+
+Code: https://github.com/guojunq/lsgan
+
+Paper: https://arxiv.org/pdf/1701.06264
+
+About gradient penalty of LS-GAN, you can find the following paragraph in the first version of LS-GAN, Chapter 5 [[pdf](https://arxiv.org/pdf/1701.06264v1.pdf)]
+"Alternatively, one may consider to directly minimize
+the gradient norm ||∇xLθ(x)|| as a regularizer for
+the LS-GAN. In this paper, we adopt weight decay for its
+simplicity and find it works well with the LS-GAN model
+in experiments."
+
+### 2.WGAN
+
+Code: https://github.com/martinarjovsky/WassersteinGAN
+
+Paper: https://arxiv.org/pdf/1701.07875
+
+### 3.WGAN-GP
+
+Code: https://github.com/caogang/wgan-gp/blob/master/gan_mnist.py#L129
+
+Paper: https://arxiv.org/pdf/1704.00028.pdf#Chapter4
+
+Note: I used '#' in the above links to let you know the detail locations. Since those link are pdf files instead of html it will not jump to the anchor automatically.
+
+## Usage
+### 1.Set up PYTORCH
+1.In this implementation, we use the following version of PYTORCH, 
+``` bash
+$ pip list | grep torch
+torch (0.1.12.post2)
+torchvision (0.1.8)
+```
+
+However, if you want to calculate the true gradient penalty, you need to use the master version of PYTORCH which have the function: torch.autograd.grad() [[source](https://github.com/pytorch/pytorch/blob/master/torch/autograd/__init__.py)]
+
+Then you will have some challenge of compiling PYTORCH.
+
+### 2.Download dataset
+1.Setup and download celebA dataset 
+
+Download img_align_celeba.zip from [http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) under the link "Align&Cropped Images".
+
+Note: As long as you have a sub-folder under the main images folder and use the --dataset folder, the code will work.
+
+### 3.Training the LS-GAN-GP
+```bash
+$ python lsgan-gp.py --dataset folder --dataroot celebA --cuda --niter 25
+```
+
+## Acknowledge: 
+
+1. parts of codes are reused from DCGAN at https://github.com/Newmu/dcgan_code
+
+2. the code downloading cifar10 is available at https://github.com/soumith/cifar.torch
+
+3. the code downloading SVHN: http://ufldl.stanford.edu/housenumbers/ 
