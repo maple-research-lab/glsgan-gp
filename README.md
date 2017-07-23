@@ -33,6 +33,8 @@ Code: https://github.com/caogang/wgan-gp/blob/master/gan_mnist.py#L129
 
 Paper: https://arxiv.org/pdf/1704.00028.pdf#Chapter4
 
+I referenced the above paper and code to implement the gradient penalty.
+
 Note: I used '#' in the above links to let you know the detail locations. Since those link are pdf files instead of html it will not jump to the anchor automatically.
 
 ## Usage
@@ -43,6 +45,7 @@ $ pip list | grep torch
 torch (0.1.12.post2)
 torchvision (0.1.8)
 ```
+I estimate the gradient penalty by 2 random samples, please check the code for more details.
 
 However, if you want to calculate the true gradient penalty, you need to use the master version of PYTORCH which has the function: torch.autograd.grad() [[source](https://github.com/pytorch/pytorch/blob/master/torch/autograd/__init__.py)]
 
@@ -55,10 +58,32 @@ Download img_align_celeba.zip from [http://mmlab.ie.cuhk.edu.hk/projects/CelebA.
 
 Note: For those dataset that are not supported by PYTORCH, you can create your own image folder and use the --dataset folder, the code will work. And be sure to have a sub-folder under the main images folder. For example, celebA/img_align.
 
-### 3.Training the LS-GAN-GP
+### 3.Train LS-GAN-GP
 ```bash
 $ python lsgan-gp.py --dataset folder --dataroot celebA --cuda --niter 25
 ```
 
-### 4.Results
+## Results
 We save our generated images in samples folder using torchvision.utils.save_image function.
+You should get the following results after running the code.
+
+### 1 epoch
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/1_epoch.jpg)
+
+### 3 epoch
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/3_epoch.jpg)
+
+### 5 epoch
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/5_epoch.jpg)
+
+### 12 epoch
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/12_epoch.jpg)
+
+### 24 epoch
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/24_epoch.jpg)
+
+### More results in 24 epoch
+
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/fake_samples_24_00002900.jpg)
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/fake_samples_24_00003000.jpg)
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/fake_samples_24_00003100.jpg)
