@@ -158,7 +158,6 @@ netD.apply(weights_init)
 print(netD)
 
 def calc_gradient_penalty(netD, real_data, fake_data):
-    #print real_data.size()
     alpha = torch.rand(real_data.size(0), 1)
     alpha = alpha.expand(real_data.size())
     alpha = alpha.cuda() if opt.cuda else alpha
@@ -171,7 +170,6 @@ def calc_gradient_penalty(netD, real_data, fake_data):
 
     disc_interpolates = netD(interpolates)
 
-    # TODO: Make ConvBackward diffentiable
     gradients = torch.autograd.grad(outputs=disc_interpolates, inputs=interpolates,
                               grad_outputs=torch.ones(disc_interpolates.size()).cuda() if opt.cuda else torch.ones(
                                   disc_interpolates.size()),
