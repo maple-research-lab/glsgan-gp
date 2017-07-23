@@ -33,12 +33,8 @@ parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. de
 parser.add_argument('--cuda'  , action='store_true', help='enables cuda')
 parser.add_argument('--netG', default='', help="path to netG (to continue training)")
 parser.add_argument('--netD', default='', help="path to netD (to continue training)")
-parser.add_argument('--b_weight', type=float, default=0.08)
-parser.add_argument('--proj_clip_weight', type=float, default=2)
 parser.add_argument('--lamb', type=float, default=0.0002, help='the scale of the distance metric used for adaptive margins. This is actually tau in the original paper. L2: 0.05/L1: 0.001, temporary best 0.008 before applying scaling')
-parser.add_argument('--gamma', type=float, default=0., help='the coefficient for loss minimization term.  Set to zero for non-conditional LS-GAN as the theorem shows this term can be ignored. ')
 parser.add_argument('--optim_method', type=int, default=1, help='Whether to use adam (default is adam)')
-parser.add_argument('--slope', type=float, default=0, help='slope for the Leaky Rectified Linear of the cost function. It can be set in [-\infty, 1].  Slope = 1 corresponds to Wasserstein GAN, slope = 0 is LS-GAN, and slope=-1 yields C(a)=|a| (L_1 cost).')
 opt = parser.parse_args()
 
 print("-------- folder --------")
@@ -48,7 +44,6 @@ if not os.path.exists(ouputPath):
     print("Creating folder.")
     os.mkdir(ouputPath)
 
-#opt.niter = 1
 print("-------- parameters --------")
 print(opt)
 
@@ -207,7 +202,6 @@ def calc_gradient_penalty2(netD, real_data, fake_data):
     return gradient_penalty
 
 # --------- optimizer --------
-# GLS gan use either adam or rms.
 if opt.optim_method == 1:
     optimizerD = optim.Adam(netD.parameters(), lr=opt.lrD, betas=(opt.beta1, 0.999))
     optimizerG = optim.Adam(netG.parameters(), lr=opt.lrG, betas=(opt.beta1, 0.999))
@@ -218,7 +212,7 @@ else:
     print("Wrong optimizer!")
 
 # -------- Init tensor --------
-input = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize) # image size == fine size
+input = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
 fake = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
 noise = torch.FloatTensor(opt.batchSize, nz, 1, 1)
 
@@ -279,8 +273,6 @@ for epoch in range(opt.niter):
         fake = autograd.Variable(netG(noisev).data)
         outputF = netD(fake)
 
-        print(fake.size())
-
         # L1 distance
         pdist = l1dist(
             inputv.view(dataSize, opt.nc * opt.imageSize * opt.imageSize), 
@@ -289,7 +281,7 @@ for epoch in range(opt.niter):
         pdist = pdist.mul(opt.lamb)
 
         # Loss function for D.
-        cost = pdist + outputR - outputF
+        cost = outputR - outputF + pdist
         
         # Calculate hinge loss.
         df_error_hinge = cost.clone()
@@ -351,7 +343,7 @@ for epoch in range(opt.niter):
         # Automatically accumulate gradients.
         optimizerG.step()
 
-        print('Epoch {}, [{}/{}], ErrG {:.4f}, ErrD {:.4f}, OutputR {:.4f}, OutputF {:.4f}, distD {:.4f}, gradD {:.4f}, gradG {:.4f}, gp {:.4f}'.format(
+        print('Epoch {}, [{}/{}], ErrG {:.4f}, ErrD {:.4f}, OutputR {:.4f}, OutputF {:.4f}, distD {:.4f}, gradD {:.8f}, gradG {:.8f}, gp {:.4f}'.format(
                 epoch, 
                 i, 
                 len(dataloader), 
@@ -362,7 +354,7 @@ for epoch in range(opt.niter):
                 torch.mean(pdist).data[0], 
                 gradD.data[0], 
                 gradG.data[0],
-                gp.data.mean()))
+                gp))
 
         if i % 100 == 0:
             input = input.mul(0.5).add(0.5)
@@ -370,5 +362,3 @@ for epoch in range(opt.niter):
 
             fake.data = fake.data.mul(0.5).add(0.5)
             vutils.save_image(fake.data, ouputPath + '/fake_samples_{:02d}_{:08d}.jpg'.format(epoch, i))
-
-print("Process Completed.")
