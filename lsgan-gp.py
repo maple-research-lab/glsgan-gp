@@ -34,6 +34,7 @@ parser.add_argument('--cuda'  , action='store_true', help='enables cuda')
 parser.add_argument('--netG', default='', help="path to netG (to continue training)")
 parser.add_argument('--netD', default='', help="path to netD (to continue training)")
 parser.add_argument('--lamb', type=float, default=0.0002, help='the scale of the distance metric used for adaptive margins. This is actually tau in the original paper. L2: 0.05/L1: 0.001, temporary best 0.008 before applying scaling')
+parser.add_argument('--gamma', type=float, default=10, help='the scale of gradient penalty')
 parser.add_argument('--optim_method', type=int, default=1, help='Whether to use adam (default is adam)')
 opt = parser.parse_args()
 
@@ -157,30 +158,8 @@ netD.apply(weights_init)
 
 print(netD)
 
+# Graident penalty proposed originally in Qi's paper.
 def calc_gradient_penalty(netD, real_data, fake_data):
-    alpha = torch.rand(real_data.size(0), 1)
-    alpha = alpha.expand(real_data.size())
-    alpha = alpha.cuda() if opt.cuda else alpha
-
-    interpolates = alpha * real_data + ((1 - alpha) * fake_data)
-
-    if opt.cuda:
-        interpolates = interpolates.cuda()
-    interpolates = autograd.Variable(interpolates, requires_grad=True)
-
-    disc_interpolates = netD(interpolates)
-
-    gradients = torch.autograd.grad(outputs=disc_interpolates, inputs=interpolates,
-                              grad_outputs=torch.ones(disc_interpolates.size()).cuda() if opt.cuda else torch.ones(
-                                  disc_interpolates.size()),
-                              create_graph=True, retain_graph=True, only_inputs=True)[0]
-
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * LAMBDA
-    return gradient_penalty
-
-def calc_gradient_penalty2(netD, real_data, fake_data):
-    LAMBDA = 10
-
     alpha1 = real_data.clone().fill_(random.uniform(0, 1))
     alpha1 = alpha1.cuda() if opt.cuda else alpha1
 
@@ -196,7 +175,51 @@ def calc_gradient_penalty2(netD, real_data, fake_data):
     x1 = x1.view(x1.size(0), x1.size(1) * x1.size(2) * x1.size(3)) 
     x2 = x2.view(x2.size(0), x2.size(1) * x2.size(2) * x2.size(3))
 
-    gradient_penalty = (((y1 - y2).abs()/dist(x1, x2) -1) **2).mean() * LAMBDA
+    gradient_penalty = ((y1 - y2).abs()/dist(x1, x2)).mean() * opt.gamma
+    
+    '''
+    # If you are using the master version of Pytorch, please replace the code above.
+    alpha = torch.rand(real_data.size(0), 1)
+    alpha = alpha.expand(real_data.size())
+    alpha = alpha.cuda() if opt.cuda else alpha
+
+    interpolates = alpha * real_data + ((1 - alpha) * fake_data)
+
+    if opt.cuda:
+        interpolates = interpolates.cuda()
+    interpolates = autograd.Variable(interpolates, requires_grad=True)
+
+    disc_interpolates = netD(interpolates)
+
+    # The following function is only supported in the master branch of pytorch.
+    gradients = torch.autograd.grad(outputs=disc_interpolates, inputs=interpolates,
+                              grad_outputs=torch.ones(disc_interpolates.size()).cuda() if opt.cuda else torch.ones(
+                                  disc_interpolates.size()),
+                              create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * opt.gamma
+    '''
+    
+    return gradient_penalty
+
+# Gradient penalty proposed originally in wgan-gp.
+def calc_gradient_penalty_wgan_gp(netD, real_data, fake_data):
+    alpha1 = real_data.clone().fill_(random.uniform(0, 1))
+    alpha1 = alpha1.cuda() if opt.cuda else alpha1
+
+    alpha2 = real_data.clone().fill_(random.uniform(0, 1))
+    alpha2 = alpha2.cuda() if opt.cuda else alpha2
+
+    x1 = autograd.Variable(alpha1 * real_data + ((1 - alpha1) * fake_data))
+    x2 = autograd.Variable(alpha2 * real_data + ((1 - alpha2) * fake_data))
+    y1 = netD(x1)
+    y2 = netD(x2)
+
+    dist = nn.PairwiseDistance(2)
+    x1 = x1.view(x1.size(0), x1.size(1) * x1.size(2) * x1.size(3)) 
+    x2 = x2.view(x2.size(0), x2.size(1) * x2.size(2) * x2.size(3))
+
+    gradient_penalty = (((y1 - y2).abs()/dist(x1, x2) -1) **2).mean() * opt.gamma
     return gradient_penalty
 
 # --------- optimizer --------
@@ -302,7 +325,7 @@ for epoch in range(opt.niter):
 
         # Train with gradient penalty
         # -----------------------------------------------------------------#
-        gp = calc_gradient_penalty2(netD, inputv.data, fake.data)
+        gp = calc_gradient_penalty(netD, inputv.data, fake.data)
         gp.backward()
 
         # Error of D
