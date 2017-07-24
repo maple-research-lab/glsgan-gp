@@ -45,7 +45,7 @@ Download img_align_celeba.zip from [http://mmlab.ie.cuhk.edu.hk/projects/CelebA.
 ``` bash
 $ python ./Data/face_detect.py
 ```
-Note: For those dataset that are not supported by PYTORCH, you can create your own image folder and use the --dataset folder, the code will work. And be sure to have a sub-folder under the main images folder. For example, celebA_crop/64_crop/.
+Note: For those dataset that are not supported by PYTORCH, you can use your own image folder by using the parameter --dataset folder, the code will work. And be sure to have a sub-folder under the main images folder. For example, celebA_crop/64_crop/.
 
 ### 3.Train LS-GAN-GP
 ```bash
