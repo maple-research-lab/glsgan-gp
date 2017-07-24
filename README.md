@@ -14,7 +14,7 @@ Code: https://github.com/guojunq/lsgan
 
 Paper: https://arxiv.org/pdf/1701.06264
 
-About gradient penalty of LS-GAN, Dr.Qi proposed it in the first version of LS-GAN, Chapter 5 [[pdf](https://arxiv.org/pdf/1701.06264v1.pdf)]
+The implementation follows the idea of gradient penalty proposed originally in the first version of LS-GAN, Chapter 5 [[pdf](https://arxiv.org/pdf/1701.06264v1.pdf)], quoted here
 "Alternatively, one may consider to directly minimize
 the gradient norm ||∇xLθ(x)|| as a regularizer for
 the LS-GAN. In this paper, we adopt weight decay for its
