@@ -352,7 +352,7 @@ for epoch in range(opt.niter):
                 torch.mean(pdist).data[0], 
                 gradD.data[0], 
                 gradG.data[0],
-                gp))
+                gp.data.mean()))
 
         if i % 100 == 0:
             input = input.mul(0.5).add(0.5)
