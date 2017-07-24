@@ -14,7 +14,7 @@ Code: https://github.com/guojunq/lsgan
 
 Paper: https://arxiv.org/pdf/1701.06264
 
-About gradient penalty of LS-GAN, Dr.Qi proposed it in the first version of LS-GAN, Chapter 5 [[pdf](https://arxiv.org/pdf/1701.06264v1.pdf)]
+The implementation follows the idea of gradient penalty proposed originally in the first version of LS-GAN, Chapter 5 [[pdf](https://arxiv.org/pdf/1701.06264v1.pdf)], quoted here
 "Alternatively, one may consider to directly minimize
 the gradient norm ||∇xLθ(x)|| as a regularizer for
 the LS-GAN. In this paper, we adopt weight decay for its
@@ -40,12 +40,12 @@ Then you will be challenged with compiling PYTORCH on your local server.
 
 Download img_align_celeba.zip from [http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) under the link "Align&Cropped Images".
 
-Note: For those dataset that are not supported by PYTORCH, you can create your own image folder and use the --dataset folder, the code will work. And be sure to have a sub-folder under the main images folder. For example, celebA/img_align.
 
-2. Crop the face using face detector.
+2.Crop the face using face detector.
 ``` bash
 $ python ./Data/face_detect.py
 ```
+Note: For those dataset that are not supported by PYTORCH, you can use your own image folder by using the parameter --dataset folder, the code will work. And be sure to have a sub-folder under the main images folder. For example, celebA_crop/64_crop/.
 
 ### 3.Train LS-GAN-GP
 ```bash
@@ -57,22 +57,13 @@ We save our generated images in samples folder using torchvision.utils.save_imag
 You should get the following results after running the code.
 
 ### 1 epoch
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/1_epoch.jpg)
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_1_epoch.jpg)
 
 ### 3 epoch
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/3_epoch.jpg)
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_3_epoch.jpg)
 
 ### 5 epoch
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/5_epoch.jpg)
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_5_epoch.jpg)
 
-### 12 epoch
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/12_epoch.jpg)
-
-### 24 epoch
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/24_epoch.jpg)
-
-### More results in 24 epoch
-
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/fake_samples_24_00002900.jpg)
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/fake_samples_24_00003000.jpg)
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/fake_samples_24_00003100.jpg)
+### 20 epoch
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_20_epoch.jpg)
