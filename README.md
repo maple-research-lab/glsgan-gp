@@ -8,7 +8,7 @@ Please cite the following paper when referring to the following algorithms:
 
 ## Reference
 
-### 1.LS-GAN
+### LS-GAN
 
 Code: https://github.com/guojunq/lsgan
 
@@ -20,22 +20,6 @@ the gradient norm ||∇xLθ(x)|| as a regularizer for
 the LS-GAN. In this paper, we adopt weight decay for its
 simplicity and find it works well with the LS-GAN model
 in experiments."
-
-### 2.WGAN
-
-Code: https://github.com/martinarjovsky/WassersteinGAN
-
-Paper: https://arxiv.org/pdf/1701.07875
-
-### 3.WGAN-GP
-
-Code: https://github.com/caogang/wgan-gp/blob/master/gan_mnist.py#L129
-
-Paper: https://arxiv.org/pdf/1704.00028.pdf#Chapter4
-
-I referenced the above paper and code to implement the gradient penalty.
-
-Note: I used '#' in the above links to let you know the detail locations. Since those link are pdf files instead of html it will not jump to the anchor automatically.
 
 ## Usage
 ### 1.PYTORCH version
@@ -58,9 +42,14 @@ Download img_align_celeba.zip from [http://mmlab.ie.cuhk.edu.hk/projects/CelebA.
 
 Note: For those dataset that are not supported by PYTORCH, you can create your own image folder and use the --dataset folder, the code will work. And be sure to have a sub-folder under the main images folder. For example, celebA/img_align.
 
+2. Crop the face using face detector.
+``` bash
+$ python ./Data/face_detect.py
+```
+
 ### 3.Train LS-GAN-GP
 ```bash
-$ python lsgan-gp.py --dataset folder --dataroot celebA --cuda --niter 25
+$ python lsgan-gp.py --dataset folder --dataroot celebA_crop --cuda --niter 25
 ```
 
 ## Results
