@@ -4,14 +4,14 @@ import numpy as np
 
 # Get user supplied values
 # Create the haar cascade
-cascPath = 'haarcascade_frontalface_default.xml'
+cascPath = './Data/haarcascade_frontalface_default.xml'
 faceCascade = cv2.CascadeClassifier(cascPath)
 
 # Read the image
-for fn in sorted(os.listdir('../data/CelebA/images')):
+for fn in sorted(os.listdir('./celebA/img_align_celeba')):
     print fn
-    image = cv2.imread(os.path.abspath('../data/CelebA/images/' + fn))
-    print(os.path.abspath('../data/CelebA/images/' + fn))
+    image = cv2.imread(os.path.abspath('./celebA/img_align_celeba/' + fn))
+    print(os.path.abspath('./celebA/img_align_celeba/' + fn))
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     faces = faceCascade.detectMultiScale(gray, 5, 5)
