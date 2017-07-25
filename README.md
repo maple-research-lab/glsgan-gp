@@ -56,14 +56,32 @@ $ python lsgan-gp.py --dataset folder --dataroot celebA_crop --cuda --niter 25
 We save our generated images in samples folder using torchvision.utils.save_image function.
 You should get the following results after running the code.
 
+LSGAN-GP converges faster! You can start getting recognizable results after half an epoch.
+
+### half epoch
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_lsgan_gp_half_epoch.jpg)
+
 ### 1 epoch
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_1_epoch.jpg)
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_lsgan_gp_1_epoch.jpg)
+
+### 2 epoch
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_lsgan_gp_2_epoch.jpg)
 
 ### 3 epoch
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_3_epoch.jpg)
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_lsgan_gp_3_epoch.jpg)
 
 ### 5 epoch
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_5_epoch.jpg)
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_lsgan_gp_5_epoch.jpg)
+
+### 10 epoch
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_lsgan_gp_10_epoch.jpg)
+
+### 15 epoch
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_lsgan_gp_15_epoch.jpg)
 
 ### 20 epoch
-![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_20_epoch.jpg)
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_lsgan_gp_20_epoch.jpg)
+
+### 25 epoch
+![alt text](https://github.com/zzzucf/lsgan-gp/blob/master/results/crop_lsgan_gp_25_epoch.jpg)
+
