@@ -27,20 +27,19 @@ parser.add_argument('--nz', type=int, default=100, help='size of the latent z ve
 parser.add_argument('--ngf', type=int, default=64)
 parser.add_argument('--ndf', type=int, default=64)
 parser.add_argument('--niter', type=int, default=25, help='number of epochs to train for')
-parser.add_argument('--lrD', type=float, default=0.0002, help='learning rate for Critic, default=0.0002')
-parser.add_argument('--lrG', type=float, default=0.0002, help='learning rate for Generator, default=0.0002')
+parser.add_argument('--lrD', type=float, default=2e-4, help='learning rate for Critic, default=0.0002')
+parser.add_argument('--lrG', type=float, default=2e-4, help='learning rate for Generator, default=0.0002')
 parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.5')
 parser.add_argument('--cuda'  , action='store_true', help='enables cuda')
 parser.add_argument('--netG', default='', help="path to netG (to continue training)")
 parser.add_argument('--netD', default='', help="path to netD (to continue training)")
-parser.add_argument('--lamb', type=float, default=0.0002, help='the scale of the distance metric used for adaptive margins. This is actually tau in the original paper. L2: 0.05/L1: 0.001, temporary best 0.008 before applying scaling')
+parser.add_argument('--lamb', type=float, default=2e-4, help='the scale of the distance metric used for adaptive margins. This is actually tau in the original paper. L2: 0.05/L1: 0.001, temporary best 0.008 before applying scaling')
 parser.add_argument('--gamma', type=float, default=10, help='the scale of gradient penalty')
 parser.add_argument('--optim_method', type=int, default=1, help='Whether to use adam (default is adam)')
 opt = parser.parse_args()
 
 print("-------- folder --------")
 ouputPath = os.getcwd() + "/" + opt.result
-print(os.path.exists(ouputPath))
 if not os.path.exists(ouputPath):
     print("Creating folder.")
     os.mkdir(ouputPath)
@@ -48,7 +47,7 @@ if not os.path.exists(ouputPath):
 print("-------- parameters --------")
 print(opt)
 
-opt.manualSeed = random.randint(1, 10000) # fix seed
+opt.manualSeed = random.randint(1, 10000)
 print("Random Seed: ", opt.manualSeed)
 
 random.seed(opt.manualSeed)
@@ -85,12 +84,11 @@ assert dataset
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batchSize,
                                          shuffle=True, num_workers=int(opt.workers))
 
-# custom weights initialization called on netG and netD
+# Weights initialization.
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
         m.weight.data.normal_(0.0, 0.02)
-        # Add no bias
         
     elif classname.find('BatchNorm') != -1:
         m.weight.data.normal_(1.0, 0.02)
@@ -197,7 +195,7 @@ def calc_gradient_penalty(netD, real_data, fake_data):
                                   disc_interpolates.size()),
                               create_graph=True, retain_graph=True, only_inputs=True)[0]
 
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * opt.gamma
+    gradient_penalty = (gradients.norm(2, dim=1)).mean() * opt.gamma
     '''
     
     return gradient_penalty
@@ -269,7 +267,7 @@ for epoch in range(opt.niter):
 
         netD.zero_grad()
 
-        # train with real
+        # Get batach data and initialize parameters.
         input , _ = data
         dataSize = input.size(0)
         noise = torch.FloatTensor(dataSize, nz, 1, 1)
@@ -280,28 +278,27 @@ for epoch in range(opt.niter):
 
         inputv = autograd.Variable(input, requires_grad=True)
 
-        # Error R of real
+        # Loss R for real
         outputR = netD(inputv)
 
-        # Create noise and freeze net G.
+        # Create noise with normal distribution and project into data space.
         noise.normal_(0, 1)
         noisev = autograd.Variable(noise)
 
-        # Train with fake
-        # -----------------------------------------------------------------#     
-        
-        # Loss for real and fake
+        # Create a new variable to avoid backwarding to G when training D.
         fake = autograd.Variable(netG(noisev).data)
+        
+        # Loss F for fake.
         outputF = netD(fake)
 
-        # L1 distance
+        # L1 distance between real and fake.
         pdist = l1dist(
             inputv.view(dataSize, opt.nc * opt.imageSize * opt.imageSize), 
             fake.view(dataSize, opt.nc * opt.imageSize * opt.imageSize))
         
         pdist = pdist.mul(opt.lamb)
 
-        # Loss function for D.
+        # Cost function for D.
         cost = outputR - outputF + pdist
         
         # Calculate hinge loss.
@@ -313,39 +310,41 @@ for epoch in range(opt.niter):
         if opt.cuda:
             df_error_hinge = df_error_hinge.cuda()
 
-        # Train with fake
+        # Train fake with false label.
         outputF.backward(df_error_hinge.data * -1) 
 
-        # Train with real.
+        # Train real with true label.
         outputR = netD(inputv)
         outputR.backward(df_error_hinge.data)
 
-        # Gradient of D
-        gradD = inputv.grad.mean().abs()
-
-        # Train with gradient penalty
-        # -----------------------------------------------------------------#
+        # Train with gradient penalty.
         gp = calc_gradient_penalty(netD, inputv.data, fake.data)
         gp.backward()
 
-        # Error of D
+        # Gradient of D.
+        gradD = inputv.grad.mean().abs()
+
+        # Error of D.
         errD = cost.mean()
 
         # Automatically accumulate gradients.
         optimizerD.step()
 
-        # Update G network
+        # Update G network, freeze D.
         for p in netD.parameters():
-            p.requires_grad = False # to avoid computation
+            p.requires_grad = False 
 
         netG.zero_grad()
 
+        # Create noise with normal distribution and project into data space.
         noise.normal_(0, 1)
         noisev = autograd.Variable(noise, requires_grad=True)
-
         fake = netG(noisev)
+
+        # Loss F for fake.
         outputF = netD(fake)
 
+        # Calculate hinge loss.
         df_error_hinge= outputF.clone()
         df_error_hinge.data.fill_(1.0)
         df_error_hinge = df_error_hinge/(dataSize)
@@ -353,17 +352,20 @@ for epoch in range(opt.niter):
         if opt.cuda:
             df_error_hinge = df_error_hinge.cuda()
 
+        # Train fake with true label. So the G can create better sample to fool D.
+        # z -> G(z) -> D(G(z)), freezed -> hinge loss.
         outputF.backward(df_error_hinge.data)
 
-        # Error of G
+        # Error of G.
         errG = outputF.mean()
 
-        # Gradient of G
+        # Gradient of G.
         gradG = noisev.grad.mean().abs()
 
         # Automatically accumulate gradients.
         optimizerG.step()
 
+        # Showing debugging information.
         print('Epoch {}, [{}/{}], ErrG {:.4f}, ErrD {:.4f}, OutputR {:.4f}, OutputF {:.4f}, distD {:.4f}, gradD {:.8f}, gradG {:.8f}, gp {:.4f}'.format(
                 epoch, 
                 i, 
