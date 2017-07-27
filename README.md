@@ -6,6 +6,9 @@ Please cite the following paper when referring to the following algorithms:
 
 **Guo-Jn Qi. Loss-Sensitive Generative Adversarial Networks on Lipschitz Densities. arXiv:1701.06264 [[pdf](https://arxiv.org/abs/1701.06264)]**
 
+For more information about our group, please visit our offical group website:
+http://server.cs.ucf.edu/maple/index.html
+
 ## Reference
 
 ### LS-GAN
