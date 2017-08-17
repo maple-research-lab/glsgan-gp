@@ -323,7 +323,7 @@ for epoch in range(opt.niter):
 
         # Showing debugging information.
         print('Epoch {}, [{}/{}], ErrG {:.4f}, ErrD {:.4f}, OutputR {:.4f}, OutputF {:.4f}, distD {:.4f}, gradD {:.8f}, gradG {:.8f}, gp {:.4f}'.format(
-                epoch, 
+                epoch+1, 
                 i, 
                 len(dataloader), 
                 errG.data[0], 
