@@ -26,14 +26,11 @@ in experiments."
 1.In this implementation, we use the following version of PYTORCH, 
 ``` bash
 $ pip list | grep torch
-torch (0.1.12.post2)
+torch (0.2.0.post1)
 torchvision (0.1.8)
 ```
-I estimate the gradient penalty by 2 random samples, please check the code for more details.
-
-However, if you want to calculate the true gradient penalty, you need to use the master version of PYTORCH which has the function: torch.autograd.grad() [[source](https://github.com/pytorch/pytorch/blob/master/torch/autograd/__init__.py)]
-
-Then you will be challenged with compiling PYTORCH on your local server.
+We use the following function to calculate the gradient penalty.
+torch.autograd.grad() [[source](https://github.com/pytorch/pytorch/blob/master/torch/autograd/__init__.py)]
 
 ### 2.Download dataset
 1.Setup and download celebA dataset 
