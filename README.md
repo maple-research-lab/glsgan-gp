@@ -1,6 +1,6 @@
 # Loss-Sensitive GAN With Gradient Penalty
 
-Implemented by: Zihang Zou, [[Laboratory for MAchine Perception and Learning(MAPLE)](http://server.cs.ucf.edu/maple/index.html)], University of Central Florida
+Implemented by: Zihang Zou, [[Laboratory for MAchine Perception and Learning(MAPLE)](http://maple.cs.ucf.edu)], University of Central Florida
 
 Please cite the following paper when referring to the following algorithms:
 
