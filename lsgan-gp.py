@@ -223,7 +223,7 @@ for epoch in range(opt.niter):
 
         netD.zero_grad()
 
-        # Get batach data and initialize parameters.
+        # Get batch data and initialize parameters.
         input , _ = data
         dataSize = input.size(0)
         noise = torch.FloatTensor(dataSize, nz, 1, 1)
