@@ -7,10 +7,8 @@ import torch.utils.data
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
-
 import torch.autograd as autograd
 import os
-import matplotlib.pyplot as plt
 
 # Run this command to execute the script.
 # python lsgan-gp.py --dataset folder --dataroot celebA --cuda --niter 25
@@ -31,11 +29,12 @@ parser.add_argument('--lrD', type=float, default=2e-4, help='learning rate for C
 parser.add_argument('--lrG', type=float, default=2e-4, help='learning rate for Generator, default=0.0002')
 parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.5')
 parser.add_argument('--cuda'  , action='store_true', help='enables cuda')
-parser.add_argument('--netG', default='', help="path to netG (to continue training)")
-parser.add_argument('--netD', default='', help="path to netD (to continue training)")
+parser.add_argument('--gpu', type=int, default=0, help='run on selected gpu, default is 0')
 parser.add_argument('--lamb', type=float, default=2e-4, help='the scale of the distance metric used for adaptive margins. This is actually tau in the original paper. L2: 0.05/L1: 0.001, temporary best 0.008 before applying scaling')
 parser.add_argument('--gamma', type=float, default=10, help='the scale of gradient penalty')
+parser.add_argument('--slope', type=float, default=0.0, help='slope for function c proposed in generalized lsgan, when slope is 0, gls-gan is lsgan, when slope is 1 gls-gan is wgan.')
 parser.add_argument('--optim_method', type=int, default=1, help='Whether to use adam (default is adam)')
+parser.add_argument('--manualSeed', type=int, help='manual seed')
 opt = parser.parse_args()
 
 print("-------- folder --------")
@@ -128,7 +127,6 @@ netG = nn.Sequential(
     )
 
 netG.apply(weights_init)
-
 print(netG)
 
 # Net D
@@ -138,43 +136,33 @@ netD = nn.Sequential(
             nn.LeakyReLU(0.2, True),
 
             nn.Conv2d(ndf, ndf*2, 4, 2, 1),
-            #nn.BatchNorm2d(ndf*2),
             nn.LeakyReLU(0.2, True),
 
             nn.Conv2d(ndf*2, ndf*4, 4, 2, 1),
-            #nn.BatchNorm2d(ndf*4),
             nn.LeakyReLU(0.2, True),
 
             nn.Conv2d(ndf*4, ndf*8, 4, 2, 1),
-            #nn.BatchNorm2d(ndf*8),
             nn.LeakyReLU(0.2, True),
 
             nn.Conv2d(ndf*8, 1, 4)
         )
 
 netD.apply(weights_init)
-
 print(netD)
 
 # Graident penalty proposed originally in Qi's paper.
-def calc_gradient_penalty(netD, data):
-    # If you are using the master version of Pytorch, please replace the code above.
-    x = autograd.Variable(data, requires_grad=True)
-    if opt.cuda:
+def get_direct_gradient_penalty(netD, x, gamma, cuda):
+    if cuda:
         x = x.cuda()
+
+    x = autograd.Variable(x, requires_grad=True)
+    output = netD(x)
+    gradOutput = torch.ones(output.size()).cuda() if cuda else torch.ones(output.size())
     
-    disc_x = netD(x)
-
-    # The following function is only supported in the master branch of pytorch.
-    gradients = torch.autograd.grad(outputs=disc_x, inputs=x,
-                              grad_outputs=torch.ones(disc_x.size()).cuda() if opt.cuda else torch.ones(
-                                  disc_x.size()),
-                              create_graph=True, retain_graph=True, only_inputs=True)[0]
-
-    gradient_penalty = (gradients.norm(2, dim=1)).mean() * opt.gamma
+    gradient = torch.autograd.grad(outputs=output, inputs=x, grad_outputs=gradOutput, create_graph=True, retain_graph=True, only_inputs=True)[0]
+    gradientPenalty = (gradient.norm(2, dim=1)).mean() * gamma
     
-    return gradient_penalty
-
+    return gradientPenalty
 
 # --------- optimizer --------
 if opt.optim_method == 1:
@@ -187,157 +175,122 @@ else:
     print("Wrong optimizer!")
 
 # -------- Init tensor --------
-input = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
-fake = torch.FloatTensor(opt.batchSize, 3, opt.imageSize, opt.imageSize)
-noise = torch.FloatTensor(opt.batchSize, nz, 1, 1)
-
 l1dist = nn.PairwiseDistance(1)
 l2dist = nn.PairwiseDistance(2)
-hingeLoss = nn.HingeEmbeddingLoss()
+LeakyReLU = nn.LeakyReLU(opt.slope)
 
-# -------- Run on GPU --------
-if opt.cuda:
-    netD.cuda()
-    netG.cuda()
-    
-    input = input.cuda()
-    fake = fake.cuda()
-    noise = noise.cuda()
+with torch.cuda.device(opt.gpu):
+    print("--------GPU Config--------")
+    print("Current GPU: " + str(torch.cuda.current_device()))
+    print("Total GPU: " + str(torch.cuda.device_count()))
 
-    l1dist = l1dist.cuda()
-    hingeLoss = hingeLoss.cuda()
+    # -------- Run on GPU --------
+    if opt.cuda:
+        netD.cuda()
+        netG.cuda()
 
-# -------- Training --------
-for epoch in range(opt.niter):
-    data_iter = iter(dataloader)
+        l1dist = l1dist.cuda()
+        l2dist = l2dist.cuda()
+        LeakyReLU = LeakyReLU.cuda()
 
-    i = 0
-    while i < len(dataloader):
-        i = i + 1
+    # -------- Training --------
+    for epoch in range(opt.niter):
+        data_iter = iter(dataloader)
 
-        data = data_iter.next()
-        
-        # Update D network
-        for p in netD.parameters():
-            p.requires_grad = True 
+        i = 0
+        while i < len(dataloader):
+            i = i + 1
 
-        netD.zero_grad()
+            data = data_iter.next()
+            
+            # Update D network
+            for p in netD.parameters():
+                p.requires_grad = True 
 
-        # Get batch data and initialize parameters.
-        input , _ = data
-        dataSize = input.size(0)
-        noise = torch.FloatTensor(dataSize, nz, 1, 1)
-        
-        if opt.cuda:
-            input = input.cuda()
-            noise = noise.cuda()
+            netD.zero_grad()
 
-        inputv = autograd.Variable(input, requires_grad=True)
+            # Get batch data and initialize parameters.
+            x , _ = data
+            dataSize = x.size(0)
+            z = torch.FloatTensor(dataSize, nz, 1, 1).normal_(0, 1)
+            
+            if opt.cuda:
+                x = x.cuda()
+                z = z.cuda()
 
-        # Loss R for real
-        outputR = netD(inputv)
+            x = autograd.Variable(x, requires_grad=True)
+            z = autograd.Variable(z)
 
-        # Create noise with normal distribution and project into data space.
-        noise.normal_(0, 1)
-        noisev = autograd.Variable(noise)
+            fake = autograd.Variable(netG(z).data)
 
-        # Create a new variable to avoid backwarding to G when training D.
-        fake = autograd.Variable(netG(noisev).data)
-        
-        # Loss F for fake.
-        outputF = netD(fake)
+            # Loss R for real
+            outputR = netD(x)
+            
+            # Loss F for fake.
+            outputF = netD(fake)
 
-        # L1 distance between real and fake.
-        pdist = l1dist(
-            inputv.view(dataSize, opt.nc * opt.imageSize * opt.imageSize), 
-            fake.view(dataSize, opt.nc * opt.imageSize * opt.imageSize))
-        
-        pdist = pdist.mul(opt.lamb)
+            # L1 distance between real and fake.
+            pdist = l1dist(x.view(dataSize, -1), fake.view(dataSize, -1)).mul(opt.lamb)
 
-        # Cost function for D.
-        cost = outputR - outputF + pdist
-        
-        # Calculate hinge loss.
-        df_error_hinge = cost.clone()
-        df_error_hinge.data = df_error_hinge.data.fill_(1.0)
-        df_error_hinge.data[cost.data.le(0)] = 0.0
-        df_error_hinge = df_error_hinge/dataSize
-        
-        if opt.cuda:
-            df_error_hinge = df_error_hinge.cuda()
+            # Loss for D.
+            errD = LeakyReLU(outputR - outputF + pdist).mean()
+            errD.backward()
+            
+            # Penalize direct gradient of x.
+            gp = get_direct_gradient_penalty(netD, x.data, opt.gamma, opt.cuda)
+            gp.backward()
 
-        # Train fake with false label.
-        outputF.backward(df_error_hinge.data * -1) 
+            # Gradient of D.
+            gradD = x.grad
 
-        # Train real with true label.
-        outputR = netD(inputv)
-        outputR.backward(df_error_hinge.data)
+            # Automatically accumulate gradients.
+            optimizerD.step()
 
-        # Train with gradient penalty.
-        gp = calc_gradient_penalty(netD, inputv.data)
-        gp.backward()
+            # Update G network, freeze D.
+            for p in netD.parameters():
+                p.requires_grad = False 
 
-        # Gradient of D.
-        gradD = inputv.grad.mean().abs()
+            netG.zero_grad()
 
-        # Error of D.
-        errD = cost.mean()
+            # Create noise with normal distribution and project into data space.
+            z = torch.FloatTensor(dataSize, nz, 1, 1).normal_(0, 1)
+            
+            if opt.cuda:
+                z = z.cuda()
 
-        # Automatically accumulate gradients.
-        optimizerD.step()
+            z = autograd.Variable(z, requires_grad=True)
+            fake = netG(z)
 
-        # Update G network, freeze D.
-        for p in netD.parameters():
-            p.requires_grad = False 
+            # Loss F for fake.
+            outputF = netD(fake)
 
-        netG.zero_grad()
+            # Error of G.
+            errG = outputF.mean()
+            errG.backward()
 
-        # Create noise with normal distribution and project into data space.
-        noise.normal_(0, 1)
-        noisev = autograd.Variable(noise, requires_grad=True)
-        fake = netG(noisev)
+            # Gradient of G.
+            gradG = z.grad
 
-        # Loss F for fake.
-        outputF = netD(fake)
+            # Automatically accumulate gradients.
+            optimizerG.step()
 
-        # Calculate hinge loss.
-        df_error_hinge= outputF.clone()
-        df_error_hinge.data.fill_(1.0)
-        df_error_hinge = df_error_hinge/(dataSize)
-        
-        if opt.cuda:
-            df_error_hinge = df_error_hinge.cuda()
+            # Showing debugging information.
+            print('Epoch {}, [{}/{}], ErrD {:.4f}, ErrG {:.4f}, OutputR {:.4f}, OutputF {:.4f}, DistD {:.4f}, GradD {:.8f}, GradG {:.8f}, GP {:.4f}'.format(
+                    epoch+1, 
+                    i, 
+                    len(dataloader), 
+                    errD.data.mean(), 
+                    errG.data.mean(),
+                    outputR.data.mean(), 
+                    outputF.data.mean(), 
+                    pdist.data.mean(), 
+                    gradD.data.abs().mean(), 
+                    gradG.data.abs().mean(),
+                    gp.data.mean()))
 
-        # Train fake with true label. So the G can create better sample to fool D.
-        # z -> G(z) -> D(G(z)), freezed -> hinge loss.
-        outputF.backward(df_error_hinge.data)
+            if i % 100 == 0:
+                x.data = x.data.mul(0.5).add(0.5)
+                vutils.save_image(x.data, ouputPath + '/real_samples_{:02d}_{:08d}.jpg'.format(epoch, i))
 
-        # Error of G.
-        errG = outputF.mean()
-
-        # Gradient of G.
-        gradG = noisev.grad.mean().abs()
-
-        # Automatically accumulate gradients.
-        optimizerG.step()
-
-        # Showing debugging information.
-        print('Epoch {}, [{}/{}], ErrG {:.4f}, ErrD {:.4f}, OutputR {:.4f}, OutputF {:.4f}, distD {:.4f}, gradD {:.8f}, gradG {:.8f}, gp {:.4f}'.format(
-                epoch+1, 
-                i, 
-                len(dataloader), 
-                errG.data[0], 
-                errD.data[0], 
-                torch.mean(outputR).data[0], 
-                torch.mean(outputF).data[0], 
-                torch.mean(pdist).data[0], 
-                gradD.data[0], 
-                gradG.data[0],
-                gp.data.mean()))
-
-        if i % 100 == 0:
-            input = input.mul(0.5).add(0.5)
-            vutils.save_image(input, ouputPath + '/real_samples_{:02d}_{:08d}.jpg'.format(epoch, i))
-
-            fake.data = fake.data.mul(0.5).add(0.5)
-            vutils.save_image(fake.data, ouputPath + '/fake_samples_{:02d}_{:08d}.jpg'.format(epoch, i))
+                fake.data = fake.data.mul(0.5).add(0.5)
+                vutils.save_image(fake.data, ouputPath + '/fake_samples_{:02d}_{:08d}.jpg'.format(epoch, i))
