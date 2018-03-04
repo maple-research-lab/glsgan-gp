@@ -1,4 +1,4 @@
-# Loss-Sensitive GAN
+# Generalized Loss-Sensitive GAN
 
 Framework: Pytorch 0.2.0.post1 or above
 
@@ -18,20 +18,27 @@ Code: https://github.com/guojunq/lsgan
 
 Paper: https://arxiv.org/pdf/1701.06264
 
-This implementation covers the algorithms proposed in loss-sensitive GAN, including direct gradient penalty and generalized loss sensitive GAN. The loss sensitive gan regularizes GAN on Lipschitz density through a margin and well defined discrminator output. LSGAN abandons the the binary entropy term proposed in original GAN and apply the assumption that a real example should have a smaller loss than a generated sample. Discrmintor loss and generator loss for GLS-GAN are as below:
+
+## GLS-GAN (Generalized Loss-Sensitive GAN)
+This project implements the algorithms proposed in generalized loss-sensitive GAN (GLS-GAN), which includes both conventional LS-GAN and WGAN as special cases. The loss sensitive gan regularizes GAN on Lipschitz density through a margin and well defined discrminator output. LSGAN abandons the the binary entropy term proposed in classic GAN and apply the assumption that a real example should have a smaller loss than a generated sample. 
+
+### Training Objctives and Cost Function for GLS-GAN
+Discrmintor loss and generator loss for GLS-GAN are as below:
 
 D_loss = LeakyReLU(D(x) - D(G(z)) + lambda * \delta(x, G(z))).mean()
 
 G_loss = D(G(z)).mean()
 
-It's worthy noted that we use LeakyReLU for generalized LS-GAN. And this function is only a special case of ()+ from the original proof. Any other ()+ function also works under the generalized theorem of LS-GAN.
+It's worth noting that we use LeakyReLU as the cost function for  GLS-GAN.
 
+**By setting the slope in LeakyReLU to 0, the GLS-GAN becomes LS-GAN;
+Otherwise, by setting the slope to 1, the GLS-GAN becomes WGAN.**
+
+Thus, GLS-GAN is a more general regularized GAN model, which has better generalization performance than both LS-GAN and WGAN by choosing a proper cost function. More details can be found in the paper.
+
+### Gradient Penalty 
 The gradient penalty applies the form proposed originally in the first version of LS-GAN, Chapter 5 [[pdf](https://arxiv.org/pdf/1701.06264v1.pdf)], quoted here
-"Alternatively, one may consider to directly minimize
-the gradient norm ||∇xLθ(x)|| as a regularizer for
-the LS-GAN. In this paper, we adopt weight decay for its
-simplicity and find it works well with the LS-GAN model
-in experiments."
+"Alternatively, one may consider to directly minimize the gradient norm ||∇xLθ(x)|| as a regularizer for the LS-GAN. In this paper, we adopt weight decay for its simplicity and find it works well with the LS-GAN model in experiments."
 
 ## Usage
 ### 1.PYTORCH version
